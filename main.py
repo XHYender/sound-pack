@@ -26,7 +26,7 @@ class SoundBoardApp:
         # 注意：这里使用的名字 "CABLE Input" 是 VB-Cable 驱动创建的
         # 如果你用的是 Mac BlackHole，名字可能叫 "BlackHole 2ch"
         self.VIRTUAL_MIC_DEVICE_INDEX = None
-        self.init_virtual_device()
+        #self.init_virtual_device()
 
         # 搜索变量
         self.search_var = tk.StringVar()
@@ -60,6 +60,9 @@ class SoundBoardApp:
 
         tk.Button(top_frame, text="📂 打开声音包文件夹", command=self.open_folder).pack(side=tk.LEFT, padx=5)
         tk.Button(top_frame, text="➕ 添加文件", command=self.add_files).pack(side=tk.LEFT, padx=5)
+
+        # 👇 新增：刷新按钮
+        tk.Button(top_frame, text="🔄 刷新音效列表", command=self.load_sound_list).pack(side=tk.LEFT, padx=5)
 
         # 2. 搜索框
         tk.Label(self.root, text="搜索音效:").pack(anchor=tk.W, padx=10)
