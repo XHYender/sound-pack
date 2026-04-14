@@ -1,9 +1,7 @@
 import os
-import pyaudio
-import wave
 import threading
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import filedialog
 from mutagen.mp3 import MP3
 from mutagen.oggvorbis import OggVorbis
 import pygame
@@ -185,28 +183,6 @@ class SoundBoardApp:
         # 在后台线程播放，避免界面卡顿
         threading.Thread(target=self._play_audio, args=(file_path,), daemon=True).start()
 
-    def old_play_audio(self, filepath):
-        """实际的播放逻辑：混合到虚拟麦克风"""
-        try:
-            # 关键点：使用 Pygame 混音器播放
-            # Pygame 默认输出到系统默认扬声器，但如果你将系统默认播放设备设为虚拟线缆的输出端，
-            # 或者直接用 PyAudio 指定输出设备到虚拟线缆，即可实现“混入麦克风”。
-            # 简单方案：让 Pygame 正常播放，同时你在 Windows 声音设置里把“扬声器”设为虚拟线缆即可。
-            # 如果希望更精确，可以使用 PyAudio 直接输出到指定设备。
-            
-            # 这里演示最简单的调用：
-            sound = pygame.mixer.Sound(filepath)
-            # 👇 新增：应用当前音量
-            sound.set_volume(self.get_current_volume())
-            sound.play()
-            # 等待播放结束
-            while pygame.mixer.get_busy():
-                pygame.time.wait(10)
-            self.status_label.config(text="就绪")
-        except Exception as e:
-            print(f"播放错误: {e}")
-            self.status_label.config(text="播放失败")
-
     def play_audio(self, filepath):
         """播放指定的音频文件"""
         self.status_label.config(text=f"正在播放: {os.path.basename(filepath)}")
@@ -247,7 +223,6 @@ class SoundBoardApp:
         except Exception as e:
             print(f"播放错误: {e}")
             self.status_label.config(text="播放失败")
-
 
     def stop_playback(self):
         """停止当前播放"""
