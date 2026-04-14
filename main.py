@@ -25,6 +25,10 @@ class SoundBoardApp:
         # 音量控制变量 (0.0 到 1.0)
         self.volume_var = tk.DoubleVar(value=0.8)  # 默认80%音量
 
+        # 👇 新增：当前播放通道（用于实时控制音量）
+        self.current_channel = None
+        self.current_sound = None
+
         # 搜索变量
         self.search_var = tk.StringVar()
         self.search_var.trace("w", self.update_list)
@@ -49,7 +53,7 @@ class SoundBoardApp:
         
         tk.Label(volume_frame, text="🔊 音量:").pack(side=tk.LEFT)
         volume_slider = tk.Scale(volume_frame, from_=0, to=100, orient=tk.HORIZONTAL, 
-                                length=120, command=self.set_volume)
+                                length=120, command=self.set_volume_realtime)
         volume_slider.set(80)  # 默认80%
         volume_slider.pack(side=tk.LEFT)
         
@@ -151,7 +155,7 @@ class SoundBoardApp:
         # 在后台线程播放，避免界面卡顿
         threading.Thread(target=self._play_audio, args=(file_path,), daemon=True).start()
 
-    def _play_audio(self, filepath):
+    def old_play_audio(self, filepath):
         """实际的播放逻辑：混合到虚拟麦克风"""
         try:
             # 关键点：使用 Pygame 混音器播放
@@ -173,9 +177,49 @@ class SoundBoardApp:
             print(f"播放错误: {e}")
             self.status_label.config(text="播放失败")
 
+    def _play_audio(self, filepath):
+        """实际的播放逻辑：支持实时音量调整"""
+        try:
+            # 停止当前正在播放的声音（可选：如果你希望同时播放多个音效，去掉这个）
+            if self.current_channel is not None and self.current_channel.get_busy():
+                self.current_channel.stop()
+            
+            # 加载声音
+            sound = pygame.mixer.Sound(filepath)
+            self.current_sound = sound
+            
+            # 获取一个空闲通道并播放
+            self.current_channel = sound.play()
+            
+            # 立即应用当前音量
+            if self.current_channel is not None:
+                current_vol = self.volume_var.get()
+                self.current_channel.set_volume(current_vol, current_vol)
+            
+            self.status_label.config(text=f"正在播放: {os.path.basename(filepath)}")
+            
+            # 等待播放完成（不阻塞界面，用轮询）
+            def check_playback():
+                if self.current_channel and self.current_channel.get_busy():
+                    self.root.after(100, check_playback)
+                else:
+                    self.status_label.config(text="就绪")
+                    self.current_channel = None
+                    self.current_sound = None
+            
+            self.root.after(100, check_playback)
+            
+        except Exception as e:
+            print(f"播放错误: {e}")
+            self.status_label.config(text="播放失败")
+
+
     def stop_playback(self):
         """停止当前播放"""
-        pygame.mixer.stop()
+        if self.current_channel is not None:
+            self.current_channel.stop()
+            self.current_channel = None
+            self.current_sound = None
         self.status_label.config(text="已停止")
 
     def open_folder(self):
@@ -205,6 +249,16 @@ class SoundBoardApp:
     def get_current_volume(self):
         """获取当前音量值 (0.0-1.0)"""
         return self.volume_var.get()
+    
+    def set_volume_realtime(self, value):
+        """实时调整正在播放的声音的音量"""
+        volume = float(value) / 100.0
+        self.volume_var.set(volume)
+        self.volume_label.config(text=f"{int(value)}%")
+        
+        # 👇 关键：如果有正在播放的声音，立即调整其音量
+        if self.current_channel is not None and self.current_channel.get_busy():
+            self.current_channel.set_volume(volume, volume)  # 左右声道音量
 
 
 if __name__ == "__main__":
