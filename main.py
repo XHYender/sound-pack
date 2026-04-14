@@ -22,11 +22,8 @@ class SoundBoardApp:
         if not os.path.exists(self.audio_folder):
             os.makedirs(self.audio_folder)
 
-        # 虚拟设备配置（核心：让系统认为这是麦克风）
-        # 注意：这里使用的名字 "CABLE Input" 是 VB-Cable 驱动创建的
-        # 如果你用的是 Mac BlackHole，名字可能叫 "BlackHole 2ch"
-        self.VIRTUAL_MIC_DEVICE_INDEX = None
-        #self.init_virtual_device()
+        # 音量控制变量 (0.0 到 1.0)
+        self.volume_var = tk.DoubleVar(value=0.8)  # 默认80%音量
 
         # 搜索变量
         self.search_var = tk.StringVar()
@@ -36,22 +33,6 @@ class SoundBoardApp:
         self.create_widgets()
         self.load_sound_list()
 
-    def init_virtual_device(self):
-        """检测虚拟音频设备是否存在"""
-        p = pyaudio.PyAudio()
-        found = False
-        for i in range(p.get_device_count()):
-            dev = p.get_device_info_by_index(i)
-            # VB-Cable 的虚拟输出端通常叫 "CABLE Input" (作为麦克风输入端)
-            if "CABLE Input" in dev['name'] or "BlackHole" in dev['name']:
-                self.VIRTUAL_MIC_DEVICE_INDEX = i
-                found = True
-                print(f"找到虚拟设备: {dev['name']} (Index: {i})")
-                break
-        p.terminate()
-        if not found:
-            messagebox.showwarning("设备缺失", 
-                "未找到虚拟音频设备！\n请安装 VB-Cable 或 BlackHole，\n否则朋友无法听到你的声音。")
 
     def create_widgets(self):
         # 1. 顶部工具栏
@@ -60,9 +41,21 @@ class SoundBoardApp:
 
         tk.Button(top_frame, text="📂 打开声音包文件夹", command=self.open_folder).pack(side=tk.LEFT, padx=5)
         tk.Button(top_frame, text="➕ 添加文件", command=self.add_files).pack(side=tk.LEFT, padx=5)
-
-        # 👇 新增：刷新按钮
         tk.Button(top_frame, text="🔄 刷新音效列表", command=self.load_sound_list).pack(side=tk.LEFT, padx=5)
+
+        # 👇 新增：音量控制区域
+        volume_frame = tk.Frame(top_frame)
+        volume_frame.pack(side=tk.RIGHT, padx=10)
+        
+        tk.Label(volume_frame, text="🔊 音量:").pack(side=tk.LEFT)
+        volume_slider = tk.Scale(volume_frame, from_=0, to=100, orient=tk.HORIZONTAL, 
+                                length=120, command=self.set_volume)
+        volume_slider.set(80)  # 默认80%
+        volume_slider.pack(side=tk.LEFT)
+        
+        self.volume_label = tk.Label(volume_frame, text="80%", width=4)
+        self.volume_label.pack(side=tk.LEFT)
+
 
         # 2. 搜索框
         tk.Label(self.root, text="搜索音效:").pack(anchor=tk.W, padx=10)
@@ -169,6 +162,8 @@ class SoundBoardApp:
             
             # 这里演示最简单的调用：
             sound = pygame.mixer.Sound(filepath)
+            # 👇 新增：应用当前音量
+            sound.set_volume(self.get_current_volume())
             sound.play()
             # 等待播放结束
             while pygame.mixer.get_busy():
@@ -198,6 +193,19 @@ class SoundBoardApp:
                 import shutil
                 shutil.copy(f, dest)
         self.load_sound_list()
+
+    def set_volume(self, value):
+        """设置全局音量"""
+        volume = float(value) / 100.0  # 0-100 转成 0.0-1.0
+        pygame.mixer.music.set_volume(volume)  # 设置背景音乐音量（如果有用）
+        # 注意：pygame.mixer.Sound 没有全局音量，需要存储音量值供播放时使用
+        self.volume_var.set(volume)
+        self.volume_label.config(text=f"{int(value)}%")
+
+    def get_current_volume(self):
+        """获取当前音量值 (0.0-1.0)"""
+        return self.volume_var.get()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
