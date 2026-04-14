@@ -8,6 +8,8 @@ from mutagen.mp3 import MP3
 from mutagen.oggvorbis import OggVorbis
 import pygame
 
+FILE=os.path.dirname(os.path.abspath(__file__)) #工作环境目录
+
 # 初始化 Pygame 混音器
 pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
 
@@ -16,6 +18,7 @@ class SoundBoardApp:
         self.root = root
         self.root.title("Soundboard - 虚拟麦克风混音器")
         self.root.geometry("600x500")
+        self.root.iconbitmap(FILE+'/assets/dick.ico')
 
         # 音频路径设置
         self.audio_folder = os.path.join(os.getcwd(), "sound_pack")
